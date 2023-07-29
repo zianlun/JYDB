@@ -4,7 +4,6 @@ import cuit.ljzhang.jydb.backend.dm.pageCache.PageCache;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @ClassName PageImpl
@@ -61,22 +60,27 @@ public class PageImpl implements Page{
         return this.dirty;
     }
 
+    @Override
     public void lock() {
         lock.lock();
     }
 
+    @Override
     public void unlock() {
         lock.unlock();
     }
 
+    @Override
     public void release() {
         pc.release(this);
     }
 
+    @Override
     public int getPageNumber() {
         return pageNumber;
     }
 
+    @Override
     public byte[] getData() {
         return data;
     }

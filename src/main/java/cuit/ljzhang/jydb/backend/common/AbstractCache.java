@@ -3,6 +3,7 @@ package cuit.ljzhang.jydb.backend.common;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static cuit.ljzhang.jydb.common.Error.CacheFullException;
 
@@ -31,6 +32,15 @@ public abstract class AbstractCache<T> {
 
     //锁
     private Lock lock = null;
+
+    /*构造函数  初始化缓存hash*/
+    public AbstractCache(int maxResource) {
+        this.maxResource = maxResource;
+        cache = new HashMap<>();
+        references = new HashMap<>();
+        getting = new HashMap<>();
+        lock = new ReentrantLock();
+    }
 
     /*
     * 尝试获取资源

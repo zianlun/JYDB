@@ -9,5 +9,13 @@ package cuit.ljzhang.jydb.backend.common;
  */
 //Todo:共享内存数组 --- 待开发
 public class SubArray {
+    public byte[] raw;
+    public int start;
+    public int end;
 
+    public SubArray(byte[] raw, int start, int end) {
+        this.raw = raw;
+        this.start = start;
+        this.end = end;
+    }
 }

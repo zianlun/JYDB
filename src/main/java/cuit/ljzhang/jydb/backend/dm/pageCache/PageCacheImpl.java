@@ -13,6 +13,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import static cuit.ljzhang.jydb.common.Error.MemTooSmallException;
+
 /**
  * @ClassName PageCacheImpl
  * @Description
@@ -23,8 +25,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * ---需要继承缓存框架
  * ---需要实现根据具体的数据源获取数据和释放数据接口
  * ---本系统的数据源为文件系统
- *
- *
  * !!!与原文不同!!!
  *      文件上锁：
  *          ---ReentrantReadWriteLock
@@ -32,6 +32,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class PageCacheImpl extends AbstractCache<Page> implements PageCache{
 
+    //Todo:解释
     private static final int MEM_MIN_LIM = 10;
 
     /*数据源文件后缀*/
@@ -47,8 +48,64 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache{
     /*记录当前数据库文件的页数  -- 总页数  不只是当前在缓存中的*/
     private AtomicInteger pageNumbers;
 
-    //Todo:构造函数
 
+    PageCacheImpl(RandomAccessFile raf, FileChannel fc, int maxResource){
+        /*初始化锁 + hash*/
+        super(maxResource);
+        if(maxResource < MEM_MIN_LIM){
+            Panic.panic(MemTooSmallException);
+        }
+        /*读取文件长度*/
+        long length = 0;
+        try {
+            length = raf.length();
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+        this.fc = fc;
+        this.raf = raf;
+        rwLock = new ReentrantReadWriteLock();
+        /*每一页的大小为8k*/
+        this.pageNumbers = new AtomicInteger((int)length / PAGE_SIZE);
+    }
+
+    /*获取页在文件中的存储位置*/
+    private static long pageOffset(int pgno) {
+        return (pgno-1) * PAGE_SIZE;
+    }
+
+    /*对指定的缓存脏页进行回源*/
+    private void flush(Page page){
+        int pageNumber = page.getPageNumber();
+        long offset = pageOffset(pageNumber);
+        /*独占锁 -- 保证线程安全的*/
+        rwLock.writeLock().lock();
+        try {
+            ByteBuffer buf = ByteBuffer.wrap(page.getData());
+            fc.position(offset);
+            fc.write(buf);
+        } catch (IOException e) {
+            Panic.panic(e);
+        }finally {
+            try {
+                fc.force(false);
+            } catch (IOException e) {
+                Panic.panic(e);
+            }
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    @Override
+    public void close() {
+        super.close();
+        try {
+            fc.close();
+            raf.close();
+        } catch (IOException e) {
+            Panic.panic(e);
+        }
+    }
 
     /*从文件数据源中获取数据  并存进缓存页*/
     @Override
@@ -82,6 +139,7 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache{
         }
     }
 
+
     @Override
     public int newPage(byte[] initData) {
         int pageNumber = pageNumbers.incrementAndGet();
@@ -93,17 +151,6 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache{
     @Override
     public Page getPage(int pageNumber) throws Exception {
         return get(pageNumber);
-    }
-
-    @Override
-    public void close() {
-        super.close();
-        try {
-            fc.close();
-            raf.close();
-        } catch (IOException e) {
-            Panic.panic(e);
-        }
     }
 
     @Override
@@ -126,32 +173,4 @@ public class PageCacheImpl extends AbstractCache<Page> implements PageCache{
     public void flushPage(Page page) {
         flush(page);
     }
-
-    /*获取页在文件中的存储位置*/
-    private static long pageOffset(int pgno) {
-        return (pgno-1) * PAGE_SIZE;
-    }
-
-    /*对指定的缓存脏页进行回源*/
-    private void flush(Page page){
-        int pageNumber = page.getPageNumber();
-        long offset = pageOffset(pageNumber);
-        /*独占锁 -- 保证线程安全的*/
-        rwLock.writeLock().lock();
-        try {
-            ByteBuffer buf = ByteBuffer.wrap(page.getData());
-            fc.position(offset);
-            fc.write(buf);
-        } catch (IOException e) {
-            Panic.panic(e);
-        }finally {
-            try {
-                fc.force(false);
-            } catch (IOException e) {
-                Panic.panic(e);
-            }
-            rwLock.writeLock().unlock();
-        }
-    }
-
 }
