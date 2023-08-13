@@ -33,7 +33,9 @@ public abstract class AbstractCache<T> {
     //锁
     private Lock lock = null;
 
-    /*构造函数  初始化缓存hash*/
+    /*构造函数  初始化缓存hash
+    * maxResource : 0表示没有限制
+    * */
     public AbstractCache(int maxResource) {
         this.maxResource = maxResource;
         cache = new HashMap<>();

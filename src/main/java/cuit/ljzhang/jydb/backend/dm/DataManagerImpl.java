@@ -117,6 +117,7 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
     @Override
     public DataItem read(long uid) throws Exception {
         DataItemImpl dataItem = (DataItemImpl)super.get(uid);
+        /*判断是否被删除， 删除的话就释放缓存*/
         if(!dataItem.isValid()){
             dataItem.release();
             return null;
@@ -124,7 +125,7 @@ public class DataManagerImpl extends AbstractCache<DataItem> implements DataMana
         return dataItem;
     }
 
-    /*根据uid插入数据*/
+    /*根据xid插入数据*/
     @Override
     public long insert(long xid, byte[] data) throws Exception {
         byte[] raw = DataItem.wrapDataItemRaw(data);

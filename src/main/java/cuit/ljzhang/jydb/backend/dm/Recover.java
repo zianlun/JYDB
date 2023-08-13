@@ -215,9 +215,13 @@ public class Recover {
         } catch (Exception e) {
             Panic.panic(e);
         }
-        //Todo:待完善
-        if(flag == UNDO){
-
+        try {
+            if(flag == UNDO) {
+                DataItem.setDataItemRawInvalid(iLog.raw);
+            }
+            PageX.recoverInsert(page, iLog.raw, iLog.offset);
+        } finally {
+            page.release();
         }
     }
 
